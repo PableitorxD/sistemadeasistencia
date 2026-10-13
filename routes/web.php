@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\AttendanceController as AdminAttendanceController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\Student\AttendanceController as StudentAttendanceController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +25,12 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+// Cambio de contraseña (ambos roles)
+Route::middleware('auth')->group(function () {
+    Route::get('/cuenta/contrasena', [PasswordController::class, 'edit'])->name('password.edit');
+    Route::put('/cuenta/contrasena', [PasswordController::class, 'update'])->name('password.update');
+});
 
 Route::middleware(['auth', 'role:student'])->group(function () {
     Route::get('/mi-asistencia', [StudentAttendanceController::class, 'index'])->name('student.attendance.index');

@@ -68,7 +68,7 @@
                                     'bg-emerald-100 text-emerald-800' => $log->action === \App\Models\ActivityLog::ATTENDANCE_MARKED,
                                     'bg-amber-100 text-amber-800' => $log->action === \App\Models\ActivityLog::ATTENDANCE_UPDATED,
                                     'bg-red-100 text-red-800' => $log->action === \App\Models\ActivityLog::LOGIN_FAILED,
-                                    'bg-slate-100 text-slate-700' => in_array($log->action, [\App\Models\ActivityLog::LOGIN, \App\Models\ActivityLog::LOGOUT]),
+                                    'bg-slate-100 text-slate-700' => in_array($log->action, [\App\Models\ActivityLog::LOGIN, \App\Models\ActivityLog::LOGOUT, \App\Models\ActivityLog::PASSWORD_CHANGED]),
                                 ])>{{ $log->actionLabel() }}</span>
                             </td>
                             <td class="min-w-64 px-4 py-2 text-slate-600">{{ $log->description }}</td>

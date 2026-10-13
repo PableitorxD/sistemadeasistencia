@@ -70,6 +70,17 @@ class AttendanceTest extends TestCase
         $this->assertAuthenticatedAs($this->admin);
     }
 
+    public function test_wrong_portal_shows_hint_only_with_correct_password(): void
+    {
+        $this->post('/login', ['login' => 'admin', 'password' => 'admin123'])
+            ->assertSessionHasErrors(['login' => 'Esta es una cuenta de administrador. Ingresa desde «Ingreso de administrador» (/admin/login).']);
+
+        $this->post('/login', ['login' => 'admin', 'password' => 'incorrecta'])
+            ->assertSessionHasErrors(['login' => 'Las credenciales no son válidas.']);
+
+        $this->assertGuest();
+    }
+
     public function test_roles_are_enforced(): void
     {
         $this->actingAs($this->student)->get('/admin/asistencia')->assertForbidden();

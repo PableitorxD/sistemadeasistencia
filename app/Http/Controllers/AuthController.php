@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -40,7 +41,7 @@ class AuthController extends Controller
             $field => $data['login'],
             'password' => $data['password'],
             'role' => User::ROLE_STUDENT,
-        ], $data['login']);
+        ], $data['login'], 'portal de estudiantes');
     }
 
     /**
@@ -59,7 +60,7 @@ class AuthController extends Controller
             $field => $data['username'],
             'password' => $data['password'],
             'role' => User::ROLE_ADMIN,
-        ], $data['username']);
+        ], $data['username'], 'portal de administración');
     }
 
     public function logout(Request $request): RedirectResponse
@@ -78,7 +79,7 @@ class AuthController extends Controller
     /**
      * @param  array<string, string>  $credentials
      */
-    private function attempt(Request $request, array $credentials, string $identifier): RedirectResponse
+    private function attempt(Request $request, array $credentials, string $identifier, string $portal): RedirectResponse
     {
         $throttleKey = Str::lower($identifier).'|'.$request->ip();
 
@@ -93,12 +94,13 @@ class AuthController extends Controller
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             RateLimiter::hit($throttleKey);
 
-            ActivityLog::record(ActivityLog::LOGIN_FAILED, "Intento de acceso fallido con «{$identifier}»", [
+            ActivityLog::record(ActivityLog::LOGIN_FAILED, "Intento de acceso fallido con «{$identifier}» ({$portal})", [
                 'user_id' => null,
             ]);
 
             throw ValidationException::withMessages([
-                'login' => 'Las credenciales no son válidas.',
+                'login' => $this->wrongPortalMessage($identifier, $credentials['password'], $credentials['role'])
+                    ?? 'Las credenciales no son válidas.',
             ]);
         }
 
@@ -108,5 +110,26 @@ class AuthController extends Controller
         ActivityLog::record(ActivityLog::LOGIN, 'Inició sesión');
 
         return redirect()->intended(route('home'));
+    }
+
+    /**
+     * Si las credenciales son correctas pero de una cuenta del otro rol,
+     * indica en qué página debe ingresar (solo se revela con la contraseña correcta).
+     */
+    private function wrongPortalMessage(string $identifier, string $password, string $expectedRole): ?string
+    {
+        $user = User::where('role', '!=', $expectedRole)
+            ->where(fn ($q) => $q->where('email', $identifier)
+                ->orWhere('username', $identifier)
+                ->orWhere('registration_number', $identifier))
+            ->first();
+
+        if (! $user || ! Hash::check($password, $user->password)) {
+            return null;
+        }
+
+        return $user->isAdmin()
+            ? 'Esta es una cuenta de administrador. Ingresa desde «Ingreso de administrador» ('.route('admin.login', absolute: false).').'
+            : 'Esta es una cuenta de estudiante. Ingresa desde «Ingreso de estudiantes» ('.route('login', absolute: false).').';
     }
 }

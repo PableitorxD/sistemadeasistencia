@@ -18,6 +18,9 @@ Laravel 13 · PHP 8.3 · MySQL · Blade + Tailwind CSS 4.
 - Cambia el estado Presente/Falta de cualquier estudiante en cualquier fecha, incluso pasada.
 - Panel **Historial**: acciones del módulo activo (inicios y cierres de sesión, marcas y correcciones) con usuario, fecha, hora, registro afectado y valores anterior → nuevo. Filtrable por estudiante, fecha y tipo de acción.
 
+**Ambos roles**
+- **Cambiar contraseña** (`/cuenta/contrasena`, enlace en la barra superior): pide la contraseña actual; la nueva debe tener mínimo 8 caracteres, al menos una letra y un número, y ser distinta de la actual. El cambio queda en el historial.
+
 ## Instalación (Laragon en Windows)
 
 1. Clonar en `C:\laragon\www\sistemadeasistencia` y en Laragon: **Start All**.
@@ -57,6 +60,7 @@ php artisan test
 | Archivo | Descripción |
 |---|---|
 | `app/Http/Controllers/AuthController.php` | Login de estudiante / administrador y logout |
+| `app/Http/Controllers/PasswordController.php` | Cambio de contraseña |
 | `app/Http/Controllers/Student/AttendanceController.php` | Vista y marca del estudiante |
 | `app/Http/Controllers/Admin/AttendanceController.php` | Lista, filtros, totales y correcciones |
 | `app/Http/Controllers/Admin/ActivityLogController.php` | Panel de historial |

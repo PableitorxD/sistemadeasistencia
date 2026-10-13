@@ -24,12 +24,15 @@ class ActivityLog extends Model
 
     public const ATTENDANCE_UPDATED = 'attendance_updated';
 
+    public const PASSWORD_CHANGED = 'password_changed';
+
     public const LABELS = [
         self::LOGIN => 'Inicio de sesión',
         self::LOGIN_FAILED => 'Intento de acceso fallido',
         self::LOGOUT => 'Cierre de sesión',
         self::ATTENDANCE_MARKED => 'Marca de asistencia',
         self::ATTENDANCE_UPDATED => 'Corrección de asistencia',
+        self::PASSWORD_CHANGED => 'Cambio de contraseña',
     ];
 
     protected function casts(): array

@@ -34,6 +34,11 @@
                         {{ auth()->user()->isAdmin() ? 'Administrador' : 'Estudiante · '.auth()->user()->registration_number }}
                     </div>
                 </div>
+                <a href="{{ route('password.edit') }}" @class([
+                    'rounded-lg px-3 py-1.5 font-medium',
+                    'bg-indigo-50 text-indigo-700' => request()->routeIs('password.*'),
+                    'text-slate-600 hover:bg-slate-100 hover:text-slate-900' => ! request()->routeIs('password.*'),
+                ])>Cambiar contraseña</a>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit" class="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-100">
