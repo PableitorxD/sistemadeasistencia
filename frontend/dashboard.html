@@ -101,16 +101,12 @@
         // Función corregida para heredar los cambios del administrador (RF-07)
         async function cargarHistorial() {
             try {
-                const responseAsist = await fetch(`${API_URL}/api/historial/${estudiante.registro}`);
+                const [responseAsist, responseFechas] = await Promise.all([
+                    fetch(`${API_URL}/api/historial/${estudiante.registro}`),
+                    fetch(`${API_URL}/api/fechas`)
+                ]);
                 const asistencias = await responseAsist.json();
-                
-                // Calendario automatizado para que sirva tanto para pruebas hoy como para la defensa mañana
-                const fechasProgramadas = [
-                    { fecha: '05/10/2026', detalle: 'Clase Pasada 1' },
-                    { fecha: '07/10/2026', detalle: 'Clase Pasada 2' },
-                    { fecha: '13/10/2026', detalle: 'Clase de Ayer' },
-                    { fecha: '14/10/2026', detalle: 'Clase de la Defensa' }
-                ];
+                const fechasProgramadas = await responseFechas.json();
 
                 const lista = document.getElementById('historial-lista');
                 lista.innerHTML = "";
@@ -126,7 +122,7 @@
                         lista.innerHTML += `
                             <li class="list-group-item d-flex justify-content-between align-items-center py-2" style="font-size: 0.85rem;">
                                 <div>
-                                    <div class="fw-bold">${clase.fecha} <span class="text-muted fw-normal" style="font-size: 0.75rem;">(${clase.detalle})</span></div>
+                                    <div class="fw-bold">${clase.fecha} <span class="text-muted fw-normal" style="font-size: 0.75rem;">(${clase.hora_inicio} - ${clase.hora_fin})</span></div>
                                     <div class="text-muted" style="font-size: 0.7rem;">Hora: ${marcaReal.hora_marca}</div>
                                 </div>
                                 <span class="badge bg-success text-white text-uppercase font-monospace" style="font-size: 0.65rem; padding: 4px 8px;">PUNTUAL</span>
@@ -138,7 +134,7 @@
                         lista.innerHTML += `
                             <li class="list-group-item d-flex justify-content-between align-items-center py-2 bg-light-subtle" style="font-size: 0.85rem;">
                                 <div>
-                                    <div class="fw-bold text-secondary">${clase.fecha} <span class="text-muted fw-normal" style="font-size: 0.75rem;">(${clase.detalle})</span></div>
+                                    <div class="fw-bold text-secondary">${clase.fecha} <span class="text-muted fw-normal" style="font-size: 0.75rem;">(${clase.hora_inicio} - ${clase.hora_fin})</span></div>
                                     <div class="text-danger" style="font-size: 0.7rem;">${horaDetalle}</div>
                                 </div>
                                 <span class="badge bg-danger text-white text-uppercase font-monospace" style="font-size: 0.65rem; padding: 4px 8px;">FALTA</span>
