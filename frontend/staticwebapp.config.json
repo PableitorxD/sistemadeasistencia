@@ -1,0 +1,6 @@
+{
+  "routes": [
+    { "route": "/config.js", "headers": { "Cache-Control": "no-store" } }
+  ],
+  "navigationFallback": { "rewrite": "/index.html" }
+}
