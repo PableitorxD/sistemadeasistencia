@@ -1,0 +1,10 @@
+{
+  "name": "asistencia-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Servidor estático Node.js para el frontend de asistencia",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
