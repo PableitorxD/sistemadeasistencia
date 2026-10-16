@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Asistencia - Panel Administrador</title>
+    <link href="bootstrap.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+    <div class="container my-4" style="max-width: 850px;">
+        
+        <!-- Panel de Control Administrativo con Selector de Archivos -->
+        <div class="card p-4 shadow-sm border-0 mb-4">
+            <h4 class="fw-bold text-danger mb-1 text-center">Panel de Control Administrativo</h4>
+            <p id="modulo-titulo" class="text-muted small text-center mb-3">Módulo Activo: Cargando... · Control de Asistencias</p>
+            
+            <div class="row g-3 mb-3 text-start small">
+                <div class="col-6">
+                    <label class="fw-bold text-secondary mb-1">📁 Excel de Estudiantes:</label>
+                    <input type="file" id="file-alumnos" accept=".xlsx, .xls" class="form-control form-control-sm">
+                </div>
+                <div class="col-6">
+                    <label class="fw-bold text-secondary mb-1">📅 Excel de Fechas:</label>
+                    <input type="file" id="file-fechas" accept=".xlsx, .xls" class="form-control form-control-sm">
+                </div>
+            </div>
+
+            <div class="row g-2 align-items-stretch">
+                <div class="col-4">
+                    <button id="btn-importar" class="btn btn-dark w-100 h-100 fw-bold d-flex align-items-center justify-content-center text-center py-2">
+                        🚀 Procesar Archivos<br>Seleccionados
+                    </button>
+                </div>
+                <div class="col-4">
+                    <button onclick="reiniciarModulo()" class="btn btn-warning w-100 h-100 fw-bold text-dark d-flex align-items-center justify-content-center text-center py-2">
+                        ⚠️ Reiniciar Módulo
+                    </button>
+                </div>
+                <div class="col-4">
+                    <a href="index.html" class="btn btn-outline-secondary w-100 h-100 fw-bold d-flex align-items-center justify-content-center text-center py-2">
+                        Cerrar Sesión
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monitor General del Sistema -->
+        <div class="card p-4 shadow-sm border-0">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-secondary m-0">Monitor General del Sistema</h5>
+                <!-- Barra de búsqueda interactiva en tiempo real (RF-04) -->
+                <input type="text" id="buscador" onkeyup="filtrarTabla()" class="form-control form-control-sm w-50" placeholder="🔍 Buscar por nombre o registro...">
+            </div>
+            
+            <!-- Pestañas de Navegación -->
+            <ul class="nav nav-tabs mb-3" id="adminTabs" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active fw-bold text-secondary" id="tab-asistencias" onclick="cambiarTab('asistencias')" type="button">📋 Asistencias </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link fw-bold text-secondary" id="tab-estudiantes" onclick="cambiarTab('estudiantes')" type="button">👥 Estudiantes </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link fw-bold text-secondary" id="tab-auditoria" onclick="cambiarTab('auditoria')" type="button">🛡️ Bitácora de Actividades </button>
+                </li>
+            </ul>
+            
+            <!-- Contenedor de Tablas Dinámicas -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped table-hover m-0 align-middle" style="font-size: 0.9rem;">
+                    <thead class="table-dark" id="cabecera-tabla">
+                        <!-- Las cabeceras cambian dinámicamente -->
+                    </thead>
+                    <tbody id="cuerpo-tabla">
+                        <!-- Los datos se inyectan aquí -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Panel de Totales e Indicadores Dinámicos (RF-08) -->
+            <div id="panel-totales" class="row text-center mt-3 mx-0 py-2 bg-white rounded border small d-none">
+                <div class="col-6 border-end">
+                    <span class="text-muted fw-bold text-uppercase" style="font-size: 0.7rem;">Total Presentes:</span>
+                    <span id="total-presentes" class="fw-bold text-success ms-1 fs-6">0</span>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted fw-bold text-uppercase" style="font-size: 0.7rem;">Total Ausentes:</span>
+                    <span id="total-ausentes" class="fw-bold text-danger ms-1 fs-6">0</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="api-config.js"></script>
+    <script>
+        let tabActual = 'asistencias';
+        let datosOriginales = [];
+
+        async function cargarCabecera() {
+            try {
+                const response = await fetch(apiUrl('/api/modulo-activo'));
+                const data = await response.json();
+                document.getElementById('modulo-titulo').textContent = `Módulo Activo: ${data.nombre} · Control de Asistencias`;
+            } catch (error) {
+                console.error("Error al cargar la cabecera");
+            }
+        }
+
+        document.getElementById('btn-importar').addEventListener('click', async () => {
+            const inputAlumnos = document.getElementById('file-alumnos').files[0];
+            const inputFechas = document.getElementById('file-fechas').files[0];
+
+            if (!inputAlumnos || !inputFechas) {
+                alert("Por favor, selecciona ambos archivos Excel antes de procesar.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('archivoAlumnos', inputAlumnos);
+            formData.append('archivoFechas', inputFechas);
+
+            try {
+                const response = await fetch(apiUrl('/api/importar-estudiantes'), {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                alert(data.mensaje || data.error);
+                cargarDatosTab();
+            } catch (error) {
+                alert("Error al conectar con el servidor backend.");
+            }
+        });
+
+        async function reiniciarModulo() {
+            if (confirm("¿Estás seguro de que deseas reiniciar el módulo? Se archivará el historial actual.")) {
+                try {
+                    const nombreModulo = prompt("Ingresa el nombre del nuevo módulo académico:", "PowerBi Avanzado");
+                    if (!nombreModulo) return;
+
+                    const response = await fetch(apiUrl('/api/admin/reiniciar-modulo'), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nuevoNombre: nombreModulo })
+                    });
+                    const data = await response.json();
+                    alert(data.mensaje);
+                    cargarCabecera();
+                    cargarDatosTab();
+                } catch (error) {
+                    alert("Error al conectar con el servidor.");
+                }
+            }
+        }
+
+        function cambiarTab(tab) {
+            tabActual = tab;
+            document.querySelectorAll('.nav-tabs .nav-link').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            document.getElementById('buscador').value = ""; 
+            cargarDatosTab();
+        }
+
+        async function cargarDatosTab() {
+            const cabecera = document.getElementById('cabecera-tabla');
+            const cuerpo = document.getElementById('cuerpo-tabla');
+            cuerpo.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-3">Cargando datos...</td></tr>`;
+
+            try {
+                let url = '';
+                if (tabActual === 'asistencias') {
+                    cabecera.innerHTML = `<tr><th>Registro</th><th>Nombre Estudiante</th><th>Fecha</th><th>Hora Real</th><th>Estado</th><th>Acciones </th></tr>`;
+                    url = apiUrl('/api/admin/asistencias');
+                } else if (tabActual === 'estudiantes') {
+                    cabecera.innerHTML = `<tr><th>Número de Registro</th><th>Nombre Completo</th><th>Correo Electrónico</th></tr>`;
+                    url = apiUrl('/api/admin/estudiantes');
+                } else if (tabActual === 'auditoria') {
+                    cabecera.innerHTML = `<tr><th>Operador</th><th>Acción Realizada</th><th>Fecha</th><th>Hora</th><th>Afectado</th></tr>`;
+                    url = apiUrl('/api/admin/auditoria');
+                }
+
+                const res = await fetch(url);
+                datosOriginales = await res.json();
+                renderizarFilas(datosOriginales);
+
+            } catch (error) {
+                cuerpo.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-3">Error al conectar con el servidor backend.</td></tr>`;
+            }
+        }
+        function renderizarFilas(datos) {
+            const cuerpo = document.getElementById('cuerpo-tabla');
+            const panelTotales = document.getElementById('panel-totales');
+            cuerpo.innerHTML = "";
+
+            if (datos.length === 0) {
+                cuerpo.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-3">No se encontraron registros.</td></tr>`;
+                panelTotales.classList.add('d-none');
+                return;
+            }
+
+            let presentes = 0;
+            let ausentes = 0;
+
+            datos.forEach(row => {
+                if (tabActual === 'asistencias') {
+                    panelTotales.classList.remove('d-none');
+                    if (row.estado === 'PUNTUAL') presentes++; else ausentes++;
+
+                    const estadoSiguiente = row.estado === 'PUNTUAL' ? 'FALTA' : 'PUNTUAL';
+                    cuerpo.innerHTML += `
+                        <tr>
+                            <td class="fw-bold">${row.registro}</td>
+                            <td>${row.nombre}</td>
+                            <td>${row.fecha}</td>
+                            <td>${row.hora_marca}</td>
+                            <td><span class="badge ${row.estado === 'PUNTUAL' ? 'bg-success' : 'bg-danger'}">${row.estado}</span></td>
+                            <td>
+                                <button onclick="cambiarEstado('${row.registro}', '${row.fecha}', '${estadoSiguiente}')" class="btn ${estadoSiguiente === 'PUNTUAL' ? 'btn-outline-success' : 'btn-outline-danger'} fw-bold text-uppercase py-0 px-2" style="font-size: 0.65rem; min-width: 115px; height: 19px; line-height: 17px; border-width: 1px;">
+                                    Cambiar a ${estadoSiguiente}
+                                </button>
+                            </td>
+                        </tr>`;
+                } else {
+                    panelTotales.classList.add('d-none');
+                    if (tabActual === 'estudiantes') {
+                        cuerpo.innerHTML += `<tr><td class="fw-bold">${row.registro}</td><td>${row.nombre}</td><td>${row.correo}</td></tr>`;
+                    } else if (tabActual === 'auditoria') {
+                        cuerpo.innerHTML += `<tr><td class="text-primary fw-bold">${row.usuario}</td><td>${row.accion}</td><td>${row.fecha}</td><td>${row.hora}</td><td class="text-muted">${row.registro_afectado}</td></tr>`;
+                    }
+                }
+            });
+
+            document.getElementById('total-presentes').textContent = presentes;
+            document.getElementById('total-ausentes').textContent = ausentes;
+        }
+
+        // Función de filtrado local en tiempo real por Texto (RF-04)
+        function filtrarTabla() {
+            const termino = document.getElementById('buscador').value.toLowerCase();
+            
+            const datosFiltrados = datosOriginales.filter(row => {
+                const campoNombre = (row.nombre || '').toLowerCase();
+                const campoRegistro = (row.registro || row.usuario || '').toLowerCase();
+                return campoNombre.includes(termino) || campoRegistro.includes(termino);
+            });
+
+            renderizarFilas(datosFiltrados);
+        }
+
+        async function cambiarEstado(registro, fecha, nuevoEstado) {
+            try {
+                const response = await fetch(apiUrl('/api/admin/cambiar-asistencia'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ registro, fecha, nuevoEstado })
+                });
+                const data = await response.json();
+                alert(data.mensaje);
+                cargarDatosTab();
+            } catch (error) {
+                alert("Error al actualizar el estado.");
+            }
+        }
+
+        cargarCabecera();
+        cargarDatosTab();
+    </script>
+</body>
+</html>

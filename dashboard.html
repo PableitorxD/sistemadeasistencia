@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Asistencia - Mi Panel</title>
+    <link href="bootstrap.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+    <!-- Barra de navegación superior -->
+    <nav class="navbar navbar-white bg-white border-bottom p-3 mb-3 shadow-sm">
+        <div class="container d-flex justify-content-between">
+            <span id="student-name" class="fw-bold text-secondary">Cargando...</span>
+            <button onclick="logout()" class="btn btn-outline-danger btn-sm fw-bold">Cerrar Sesión</button>
+        </div>
+    </nav>
+
+    <!-- Contenedor optimizado a un ancho máximo de 480px para evitar exceso de tamaño en pantalla -->
+    <div class="container text-center my-4" style="max-width: 480px;">
+        <h3 class="fw-bold text-dark mb-3 fs-4">Registro de Asistencia</h3>
+
+        <div id="status-message" class="alert alert-success py-2 mb-3 small">¡El botón de marcado se encuentra disponible!</div>
+
+        <!-- Botón para marcar asistencia levemente más compacto -->
+        <button id="btn-marcar" class="btn btn-success btn-lg w-100 py-2 mb-3 fw-bold shadow-sm fs-6">
+            MARCAR ASISTENCIA AQUÍ
+        </button>
+
+        <!-- Sección de Contadores Estadísticos con fuentes estilizadas de 3 columnas -->
+        <div class="row text-center mb-4 py-2 bg-white rounded shadow-sm mx-0 border">
+            <div class="col-4 border-end">
+                <h4 id="count-puntual" class="fw-bold text-success mb-0 fs-4">0</h4>
+                <span class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px;">Puntuales</span>
+            </div>
+            <div class="col-4 border-end">
+                <h4 class="fw-bold text-warning mb-0 fs-4">0</h4>
+                <span class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px;">Atrasos</span>
+            </div>
+            <div class="col-4">
+                <h4 id="count-falta" class="fw-bold text-danger mb-0 fs-4">0</h4>
+                <span class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px;">Faltas</span>
+            </div>
+        </div>
+
+        <!-- Historial de Clases optimizado para ocupar menos espacio vertical -->
+        <div class="text-start">
+            <h6 class="fw-bold text-muted mb-2 text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Historial de clases</h6>
+            <div class="card shadow-sm p-1 bg-white border">
+                <ul id="historial-lista" class="list-group list-group-flush" style="max-height: 280px; overflow-y: auto;">
+                    <!-- Registros dinámicos -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="api-config.js"></script>
+    <script>
+        const estudiante = JSON.parse(localStorage.getItem('estudiante'));
+        if (!estudiante) window.location.href = 'index.html';
+
+        // Consulta dinámica del módulo activo al Backend
+        async function mostrarDatosCabecera() {
+            try {
+                const response = await fetch(apiUrl('/api/modulo-activo'));
+                const data = await response.json();
+                document.getElementById('student-name').textContent = `Estudiante: ${estudiante.nombre} | Curso: ${data.nombre}`;
+            } catch (error) {
+                document.getElementById('student-name').textContent = `Estudiante: ${estudiante.nombre}`;
+            }
+        }
+
+        document.getElementById('btn-marcar').addEventListener('click', async () => {
+            // AJUSTE CRÍTICO: Forzamos manualmente el formato estricto DD/MM/AAAA 
+            const hoy = new Date();
+            const dia = String(hoy.getDate()).padStart(2, '0');
+            const mes = String(hoy.getMonth() + 1).padStart(2, '0'); 
+            const anio = hoy.getFullYear();
+            
+            const fechaFormateada = `${dia}/${mes}/${anio}`; 
+            const hora = hoy.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+            try {
+                const response = await fetch(apiUrl('/api/marcar'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        registro: estudiante.registro,
+                        fecha: fechaFormateada,
+                        hora: hora
+                    })
+                });
+                const data = await response.json();
+                alert(data.mensaje || data.error);
+                cargarHistorial();
+            } catch (error) {
+                alert("Error al conectar con el servidor.");
+            }
+        });
+
+        // Función corregida para heredar los cambios del administrador (RF-07)
+        async function cargarHistorial() {
+            try {
+                const responseAsist = await fetch(apiUrl(`/api/historial/${encodeURIComponent(estudiante.registro)}`));
+                const asistencias = await responseAsist.json();
+                
+                // Calendario automatizado para que sirva tanto para pruebas hoy como para la defensa mañana
+                const fechasProgramadas = [
+                    { fecha: '05/10/2026', detalle: 'Clase Pasada 1' },
+                    { fecha: '07/10/2026', detalle: 'Clase Pasada 2' },
+                    { fecha: '13/10/2026', detalle: 'Clase de Ayer' },
+                    { fecha: '14/10/2026', detalle: 'Clase de la Defensa' }
+                ];
+
+                const lista = document.getElementById('historial-lista');
+                lista.innerHTML = "";
+                
+                let presentes = 0;
+                let faltas = 0;
+
+                fechasProgramadas.forEach(clase => {
+                    const marcaReal = asistencias.find(a => a.fecha === clase.fecha);
+
+                    if (marcaReal && marcaReal.estado === 'PUNTUAL') {
+                        presentes++;
+                        lista.innerHTML += `
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-2" style="font-size: 0.85rem;">
+                                <div>
+                                    <div class="fw-bold">${clase.fecha} <span class="text-muted fw-normal" style="font-size: 0.75rem;">(${clase.detalle})</span></div>
+                                    <div class="text-muted" style="font-size: 0.7rem;">Hora: ${marcaReal.hora_marca}</div>
+                                </div>
+                                <span class="badge bg-success text-white text-uppercase font-monospace" style="font-size: 0.65rem; padding: 4px 8px;">PUNTUAL</span>
+                            </li>`;
+                    } else {
+                        faltas++;
+                        const horaDetalle = marcaReal ? `Hora Marca: ${marcaReal.hora_marca} (Modificado por Docente)` : 'Sin registro de asistencia';
+                        
+                        lista.innerHTML += `
+                            <li class="list-group-item d-flex justify-content-between align-items-center py-2 bg-light-subtle" style="font-size: 0.85rem;">
+                                <div>
+                                    <div class="fw-bold text-secondary">${clase.fecha} <span class="text-muted fw-normal" style="font-size: 0.75rem;">(${clase.detalle})</span></div>
+                                    <div class="text-danger" style="font-size: 0.7rem;">${horaDetalle}</div>
+                                </div>
+                                <span class="badge bg-danger text-white text-uppercase font-monospace" style="font-size: 0.65rem; padding: 4px 8px;">FALTA</span>
+                            </li>`;
+                    }
+                });
+
+                document.getElementById('count-puntual').textContent = presentes;
+                document.getElementById('count-falta').textContent = faltas;
+
+            } catch (error) {
+                console.error("Error al procesar las asistencias:", error);
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+
+        mostrarDatosCabecera();
+        cargarHistorial();
+    </script>
+</body>
+</html>

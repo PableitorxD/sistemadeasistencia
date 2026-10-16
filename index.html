@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Asistencia - Login</title>
+    <link href="bootstrap.css" rel="stylesheet">
+</head>
+<body class="bg-light d-flex align-items-center justify-content-center" style="height: 100vh;">
+
+    <div class="card p-4 shadow-sm" style="width: 380px; border-radius: 12px; z-index: 1;">
+        <div class="text-center mb-4">
+            <h5 class="text-primary text-uppercase small fw-bold">Control de Asistencia</h5>
+            <h3 class="fw-bold text-dark">Ingresar al Sistema</h3>
+            <p class="text-muted small">Ingresa tu correo o número de registro</p>
+        </div>
+
+        <div id="alert-box" class="alert alert-danger d-none" role="alert"></div>
+
+        <form id="login-form">
+            <div class="mb-3">
+                <label class="form-label text-muted fw-bold small">USUARIO</label>
+                <input type="text" id="login-input" class="form-control" placeholder="Ej. 212188964 o ronald@gmail.com" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 fw-bold">Ingresar</button>
+        </form>
+        
+        <!-- Control de Acceso restringido controlado por JS Local (RF-02) -->
+        <div class="text-center mt-3">
+            <button onclick="toggleModal(true)" class="btn btn-link text-decoration-none small text-secondary p-0 border-0 bg-transparent">Acceso Administrador</button>
+        </div>
+    </div>
+
+    <!-- VENTANA MODAL MANUAL (No requiere JS de Bootstrap externo, carga instantáneo) -->
+    <div id="adminModal" class="d-none position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(0,0,0,0.5); z-index: 1050;">
+        <div class="card p-4 shadow" style="width: 360px; border-radius: 12px; bg-white;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-dark m-0 fs-5">Acceso Restringido</h5>
+                <button type="button" class="btn-close" onclick="toggleModal(false)"></button>
+            </div>
+            <div id="admin-alert" class="alert alert-danger p-2 small d-none" role="alert">Contraseña incorrecta.</div>
+            <div class="mb-3">
+                <label class="form-label text-muted fw-bold small">CONTRASENA DOCENTE</label>
+                <!-- type="password" oculta los caracteres con puntos negros -->
+                <input type="password" id="admin-password-input" class="form-control" placeholder="••••••••" required>
+            </div>
+            <button onclick="validarAdmin()" class="btn btn-danger w-100 fw-bold">Verificar Credenciales</button>
+        </div>
+    </div>
+
+    <script src="api-config.js"></script>
+    <script>
+        // Lógica de Ingreso de Estudiantes (RF-01)
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const loginValue = document.getElementById('login-input').value;
+            const alertBox = document.getElementById('alert-box');
+
+            try {
+                const response = await fetch(apiUrl('/api/login'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ login: loginValue })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    alertBox.textContent = data.error;
+                    alertBox.classList.remove('d-none');
+                } else {
+                    localStorage.setItem('estudiante', JSON.stringify(data.estudiante));
+                    window.location.href = 'dashboard.html';
+                }
+            } catch (error) {
+                alertBox.textContent = "No se pudo conectar con el servidor backend.";
+                alertBox.classList.remove('d-none');
+            }
+        });
+
+        // Alternar el estado visual del Modal de forma 100% nativa y veloz
+        function toggleModal(abrir) {
+            const modal = document.getElementById('adminModal');
+            if (abrir) {
+                modal.classList.remove('d-none');
+                document.getElementById('admin-password-input').focus();
+            } else {
+                modal.classList.add('d-none');
+                document.getElementById('admin-alert').add('d-none');
+                document.getElementById('admin-password-input').value = "";
+            }
+        }
+
+        // Lógica de Validación Oculta para el Administrador (RF-02)
+        function validarAdmin() {
+            const claveInput = document.getElementById('admin-password-input').value;
+            const adminAlert = document.getElementById('admin-alert');
+            
+            if (claveInput === "admin123" || claveInput === "docente") {
+                window.location.href = 'admin.html';
+            } else {
+                adminAlert.classList.remove('d-none');
+                document.getElementById('admin-password-input').value = "";
+            }
+        }
+    </script>
+</body>
+</html>
